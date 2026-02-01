@@ -28,9 +28,9 @@ You can deploy all services at once using the deployment script.
 bash deploy.sh
 
 # Deploy to a specific stage
-bash deploy.sh -stage dev
+bash deploy.sh --stage dev
 
-bash deploy.sh -stage prod
+bash deploy.sh --stage prod
 ```
 
 #### Option B: Individual Service Deployment
