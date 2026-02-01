@@ -21,7 +21,7 @@ Before deploying, ensure you have the following installed and configured:
 ### 2. Deployment Methods
 
 #### Option A: Deploy All (Recommended)
-You can deploy all services at once using the deployment script.
+You can deploy all services at once using the deployment script. Make sure to run this command in bash script if you are using windows
 
 ```bash
 # Default deployment to 'dev' stage
