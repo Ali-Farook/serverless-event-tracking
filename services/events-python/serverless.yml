@@ -1,0 +1,97 @@
+service: events-service
+
+frameworkVersion: '3.x'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  environment:
+    EVENTS_TABLE: device_events
+    EVENTS_QUEUE_URL:
+      Fn::GetAtt: [ EventsQueue, QueueUrl ]
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:Query
+        - sqs:SendMessage
+        - cloudwatch:PutMetricAlarm
+      Resource: "*"
+      
+package:
+  excludeDevDependencies: false
+
+functions:
+  postEvent:
+    handler: handler.post_event
+    events:
+      - http:
+          path: events
+          method: post
+          cors: true
+  
+  getDeviceEvents:
+    handler: handler.get_device_events
+    events:
+      - http:
+          path: devices/{device_id}/events
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    DeviceEventsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: device_events
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: N
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+
+    EventsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: events_queue_${sls:stage}
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [ EventsDLQ, Arn ]
+          maxReceiveCount: 1
+    
+    EventsDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: events_dlq_${sls:stage}
+
+    # CLOUDWATCH ALARM FOR DLQ MESSAGES > 0
+    DLQAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: ${self:service}-${sls:stage}-dlq-messages-alarm
+        AlarmDescription: "Alarm when DLQ has messages > 0 (Assignment Requirement)"
+        MetricName: ApproximateNumberOfMessagesVisible
+        Namespace: AWS/SQS
+        Statistic: Maximum
+        Period: 300  # 5 minutes
+        EvaluationPeriods: 1
+        Threshold: 0
+        ComparisonOperator: GreaterThanThreshold
+        Dimensions:
+          - Name: QueueName
+            Value: events_dlq_${sls:stage}  # Direct reference to DLQ name
+        TreatMissingData: notBreaching  # Missing data means queue doesn't exist or has 0 messages
+
+  Outputs:
+    EventsQueueArn:
+      Value:
+        Fn::GetAtt: [ EventsQueue, Arn ]
+      Export:
+        Name: EventsQueueArn-${sls:stage}

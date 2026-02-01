@@ -1,0 +1,101 @@
+service: rules-service
+
+frameworkVersion: '3.x'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    RULES_TABLE: alert_rules
+    EVENTS_TABLE: device_events
+    ALERTS_TABLE: alerts
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:Query
+        - dynamodb:Scan
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueAttributes
+        - sqs:ChangeMessageVisibility
+        - cloudwatch:PutMetricAlarm
+      Resource: "*"
+
+package:
+  excludeDevDependencies: false
+
+functions:
+  createRule:
+    handler: handler.createRule
+    events:
+      - http:
+          path: rules
+          method: post
+          cors: true
+  
+  listRules:
+    handler: handler.listRules
+    events:
+      - http:
+          path: rules
+          method: get
+          cors: true
+  
+  getAlerts:
+    handler: handler.getAlerts
+    events:
+      - http:
+          path: alerts
+          method: get
+          cors: true
+  
+  evaluateAlerts:
+    handler: handler.evaluateAlerts
+    events:
+      - sqs:
+          arn:
+            Fn::ImportValue: EventsQueueArn-${sls:stage}
+          batchSize: 10
+          maximumBatchingWindow: 1
+          functionResponseType: ReportBatchItemFailures  # ADDED for partial batch failures
+
+resources:
+  Resources:
+    AlertRulesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: alert_rules
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: device_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: DeviceIdIndex
+            KeySchema:
+              - AttributeName: device_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    AlertsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: alerts
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: N
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE

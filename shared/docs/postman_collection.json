@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "Serverless IoT Platform API",
+    "description": "API collection for the Serverless IoT Platform with Events and Rules services",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.1.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/dev",
+      "type": "string"
+    },
+    {
+      "key": "device_id",
+      "value": "device-001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Events Service",
+      "item": [
+        {
+          "name": "Post Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"type\": \"temperature\",\n  \"value\": 75,\n  \"ts\": {{$timestamp}}000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "events"
+              ]
+            },
+            "description": "Ingest a new device event. \n\n**Note:** `value` must be an **integer** (floats will cause a 400 error)."
+          }
+        },
+        {
+          "name": "Get Device Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/devices/{{device_id}}/events?start_time=1706659200000&end_time=1706745600000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "devices",
+                "{{device_id}}",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "start_time",
+                  "value": "1706659200000"
+                },
+                {
+                  "key": "end_time",
+                  "value": "1706745600000"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rules Service",
+      "item": [
+        {
+          "name": "Create Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"metric\": \"temperature\",\n  \"operator\": \">\",\n  \"threshold\": 80,\n  \"enabled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/rules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rules"
+              ]
+            },
+            "description": "Create an alert rule.\n\n**Note:** `threshold` must be an **integer**."
+          }
+        },
+        {
+          "name": "List Rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rules?device_id={{device_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/alerts?device_id={{device_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "alerts"
+              ],
+              "query": [
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}"
+                }
+              ]
+            },
+            "description": "Fetch historical alerts for a device."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflows",
+      "item": [
+        {
+          "name": "Test FAIL_TEST Scenario (DLQ Testing)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"FAIL_TEST\",\n  \"type\": \"temperature\",\n  \"value\": 100,\n  \"ts\": {{$timestamp}}000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "events"
+              ]
+            },
+            "description": "Sending an event with `device_id: FAIL_TEST` will force a failure in the Rules Service Lambda, causing the message to be retried and eventually sent to the Dead Letter Queue (DLQ). This is useful for testing automated alerts and CloudWatch alarms monitoring the DLQ."
+          }
+        }
+      ]
+    }
+  ]
+}
