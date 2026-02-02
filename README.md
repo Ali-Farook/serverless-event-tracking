@@ -9,7 +9,7 @@ This repository contains a serverless IoT platform built with Python (Events Ser
 Before deploying, ensure you have the following installed and configured:
 
 - **AWS CLI**: [Installed] and [configured].
-  - Run `aws configure` to set up your access keys.
+  - Run `aws configure` to set up your access keys. Make sure the account that you have configured in AWS CLI has access to DynamoDB, SQS, cloudwatch, Lambda, Cloudformation, API Gateway and other aws services
 - **Serverless Framework (v3)**: Version 3.x is required.
   - Install: `npm install -g serverless@3`
 - **Python (3.11+)**: Must be newer than 3.9. 
